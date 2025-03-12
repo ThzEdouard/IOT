@@ -5,10 +5,10 @@ TOKEN_FILE="/vagrant/config/token"
 
 echo "[+] Mise à jour et installation des prérequis..."
 apt-get update -y
-apt-get install -y curl sshpass
+apt-get install -y curl sshpass net-tools
 
 echo "[+] Installation de K3s en mode Server..."
-curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server" sh -
+curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --node-ip=${SERVER_IP}" sh -
 
 echo "[+] Configuration de kubectl pour l'utilisateur vagrant..."
 mkdir -p /home/vagrant/.kube
