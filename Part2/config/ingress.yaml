@@ -27,7 +27,7 @@ spec:
             name: app2-service
             port:
               number: 80
-  - host: "*"
+  - host: ""
     http:
       paths:
       - path: /

@@ -17,6 +17,13 @@ spec:
         image: nginx
         ports:
         - containerPort: 80
+        volumeMounts:
+        - name: app1-content
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: app1-content
+        configMap:
+          name: app1-content
 ---
 apiVersion: v1
 kind: Service
@@ -30,3 +37,19 @@ spec:
       port: 80
       targetPort: 80
   type: ClusterIP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app1-content
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>App 1</title>
+    </head>
+    <body>
+      <h1>Hello from App 1</h1>
+    </body>
+    </html>
