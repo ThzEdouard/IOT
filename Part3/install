@@ -1,8 +1,8 @@
 #!/bin/bash
 
 if k3d cluster list | grep -q p3; then
-    echo "Cluster p3 already exists. Deleting it..."
-    k3d cluster delete p3
+	echo "Cluster p3 already exists. Deleting it..."
+	k3d cluster delete p3
 fi
 
 echo "Creating K3D cluster..."
@@ -19,6 +19,22 @@ kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
 echo "Installing Argo CD..."
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --validate=false
 
+echo "Creating repository secret..."
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Secret
+metadata:
+  name: repo-secret
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  type: git
+  url: git@github.com:julesmuntz/julmuntz.git
+  sshPrivateKey: |
+$(ls ~/.ssh/id_* 2>/dev/null | grep -v "\.pub$" | xargs cat | sed 's/^/    /')
+EOF
+
 echo "Installing Argo CD application..."
 kubectl apply -f config.yaml
 
@@ -26,6 +42,7 @@ echo "Waiting for Argo CD to be ready..."
 kubectl wait --for=condition=available deployment -l app.kubernetes.io/name=argocd-server -n argocd --timeout=300s
 
 echo "Argo CD admin password:"
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+echo
 
 echo "Setup complete!"
