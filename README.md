@@ -4,4 +4,4 @@ Part1: done
 
 Part2: done
 
-Part3: app installed
+Part3: repo connected

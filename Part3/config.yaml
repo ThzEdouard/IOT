@@ -20,18 +20,16 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: playground-v1
+  name: playground
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: playground
-      version: v1
   template:
     metadata:
       labels:
         app: playground
-        version: v1
     spec:
       containers:
         - name: playground
@@ -50,3 +48,4 @@ spec:
     - protocol: TCP
       port: 8888
       targetPort: 8888
+---
