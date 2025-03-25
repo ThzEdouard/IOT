@@ -17,7 +17,7 @@ spec:
       selfHeal: true
       prune: true
 ---
-apiVersion: apps/v1
+apiVersion: apps/v2
 kind: Deployment
 metadata:
   name: playground
@@ -33,7 +33,7 @@ spec:
     spec:
       containers:
         - name: playground
-          image: wil42/playground:v1
+          image: wil42/playground:v2
           ports:
             - containerPort: 8888
 ---
