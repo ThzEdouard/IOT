@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: git@github.com:julesmuntz/julmuntz.git
-    path: .
+    path: confs
     targetRevision: HEAD
   destination:
     server: https://kubernetes.default.svc
