@@ -19,7 +19,7 @@ install:
 	@kubectl create secret generic repo-secret \
 		--namespace=argocd \
 		--from-literal=type=git \
-		--from-literal=url=ssh://git@localhost:2222/gitlab/iot.git \
+		--from-literal=url=ssh://git@localhost:2222/root/iot.git \
 		--from-file=sshPrivateKey=$$(ls ~/.ssh/id_* 2>/dev/null | grep -v "\.pub$$" | head -n 1) \
 		--dry-run=client -o yaml | \
 		kubectl label -f - --local -o yaml argocd.argoproj.io/secret-type=repository | \
@@ -72,6 +72,7 @@ setup-gitlab:
 		echo "GitLab is starting up. This may take a few minutes..."; \
 		echo "Once GitLab is up, access it at http://localhost:8080"; \
 		echo "SSH access is available on port 2222"; \
+		echo "Default username: root"; \
 		echo "Get the initial password by running: docker exec -it gitlab grep 'Password:' /etc/gitlab/initial_root_password"; \
 	else \
 		echo "GitLab container is already running."; \
@@ -94,6 +95,6 @@ init-repo:
 		git config --local user.email "local@example.com" && \
 		git config --local user.name "Local User" && \
 		git commit -m "Initial commit" && \
-		git remote add origin ssh://git@localhost:2222/gitlab/iot.git && \
+		git remote add origin ssh://git@localhost:2222/root/iot.git && \
 		echo "Attempting to push to GitLab (you may need to accept the host key)..." && \
 		GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -p 2222" git push -u origin master || echo "Failed to push. Please push manually."
