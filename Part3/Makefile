@@ -1,4 +1,4 @@
-.PHONY: install apply run
+.PHONY: install apply run connect
 
 install:
 	@if k3d cluster list | grep -q p3; then \
@@ -38,3 +38,18 @@ apply:
 
 run:
 	@kubectl port-forward svc/argocd-server -n argocd 4242:443 
+
+connect:
+	@echo "Connecting to playground pod in dev namespace..."
+	@POD_NAME=$$(kubectl get pods -n dev -l app=playground -o jsonpath="{.items[0].metadata.name}") && \
+	if [ -z "$$POD_NAME" ]; then \
+		echo "Error: No playground pods found in dev namespace"; \
+		exit 1; \
+	else \
+		echo "Connecting to pod: $$POD_NAME"; \
+		if ! kubectl exec $$POD_NAME -n dev -- which curl > /dev/null 2>&1; then \
+			echo "Installing curl..."; \
+			kubectl exec $$POD_NAME -n dev -- apk add --no-cache curl; \
+		fi; \
+		kubectl exec -it $$POD_NAME -n dev -- /bin/sh; \
+	fi 
