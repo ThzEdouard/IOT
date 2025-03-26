@@ -1,14 +1,14 @@
 .PHONY: install apply run connect setup-gitlab init-repo clean
 
 install:
-	@if k3d cluster list | grep -q p3; then \
-		echo "Cluster p3 already exists. Deleting it..."; \
-		k3d cluster delete p3; \
+	@if k3d cluster list | grep -q bonus; then \
+		echo "Cluster bonus already exists. Deleting it..."; \
+		k3d cluster delete bonus; \
 	fi
 	@echo "Creating K3D cluster..."
-	@k3d cluster create p3 --k3s-arg "--disable=traefik@server:0"
+	@k3d cluster create bonus --k3s-arg "--disable=traefik@server:0"
 	@echo "Configuring kubectl..."
-	@export KUBECONFIG=$$(k3d kubeconfig write p3)
+	@export KUBECONFIG=$$(k3d kubeconfig write bonus)
 	@kubectl cluster-info
 	@echo "Creating namespaces..."
 	@kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
@@ -19,7 +19,7 @@ install:
 	@kubectl create secret generic repo-secret \
 		--namespace=argocd \
 		--from-literal=type=git \
-		--from-literal=url=ssh://git@localhost:2222/root/iot.git \
+		--from-literal=url=git@localhost:gitlab/iot.git \
 		--from-file=sshPrivateKey=$$(ls ~/.ssh/id_* 2>/dev/null | grep -v "\.pub$$" | head -n 1) \
 		--dry-run=client -o yaml | \
 		kubectl label -f - --local -o yaml argocd.argoproj.io/secret-type=repository | \
@@ -70,10 +70,22 @@ setup-gitlab:
 			--volume gitlab-data:/var/opt/gitlab \
 			gitlab/gitlab-ce:latest; \
 		echo "GitLab is starting up. This may take a few minutes..."; \
+		echo "Waiting for GitLab to be ready (this may take several minutes)..."; \
+		until docker exec gitlab gitlab-ctl status unicorn > /dev/null 2>&1; do \
+			sleep 30; \
+			echo "Still waiting for GitLab to initialize..."; \
+		done; \
+		echo "Running reconfigure..."; \
+		docker exec gitlab gitlab-ctl reconfigure; \
+		echo "Creating admin user 'gitlab'..."; \
+		docker exec -it gitlab gitlab-rails runner \
+			"user = User.create!(username: 'gitlab', password: 'gitlabpassword', password_confirmation: 'gitlabpassword', email: 'gitlab@localhost', admin: true, confirmed_at: Time.now); user.save!"; \
 		echo "Once GitLab is up, access it at http://localhost:8080"; \
 		echo "SSH access is available on port 2222"; \
-		echo "Default username: root"; \
-		echo "Get the initial password by running: docker exec -it gitlab grep 'Password:' /etc/gitlab/initial_root_password"; \
+		echo "New admin user credentials:"; \
+		echo "Username: gitlab"; \
+		echo "Password: gitlabpassword"; \
+		echo "Root password can be found by running: docker exec -it gitlab grep 'Password:' /etc/gitlab/initial_root_password"; \
 	else \
 		echo "GitLab container is already running."; \
 	fi
@@ -95,16 +107,16 @@ init-repo:
 		git config --local user.email "local@example.com" && \
 		git config --local user.name "Local User" && \
 		git commit -m "Initial commit" && \
-		git remote add origin ssh://git@localhost:2222/root/iot.git && \
+		git remote add origin git@localhost:gitlab/iot.git && \
 		echo "Attempting to push to GitLab (you may need to accept the host key)..." && \
-		GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -p 2222" git push -u origin master || echo "Failed to push. Please push manually."
+		git push -u origin master || echo "Failed to push. Please push manually."
 
 clean:
-	@if k3d cluster list | grep -q p3; then \
-		echo "Deleting K3D cluster p3..."; \
-		k3d cluster delete p3; \
+	@if k3d cluster list | grep -q bonus; then \
+		echo "Deleting K3D cluster bonus..."; \
+		k3d cluster delete bonus; \
 	else \
-		echo "No K3D cluster named p3 found."; \
+		echo "No K3D cluster named bonus found."; \
 	fi
 	@if docker ps -a | grep -q gitlab; then \
 		echo "Stopping and removing GitLab container..."; \
