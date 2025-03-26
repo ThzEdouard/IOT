@@ -1,4 +1,4 @@
-.PHONY: install apply run connect setup-gitlab init-repo
+.PHONY: install apply run connect setup-gitlab init-repo clean
 
 install:
 	@if k3d cluster list | grep -q p3; then \
@@ -98,3 +98,21 @@ init-repo:
 		git remote add origin ssh://git@localhost:2222/root/iot.git && \
 		echo "Attempting to push to GitLab (you may need to accept the host key)..." && \
 		GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -p 2222" git push -u origin master || echo "Failed to push. Please push manually."
+
+clean:
+	@if k3d cluster list | grep -q p3; then \
+		echo "Deleting K3D cluster p3..."; \
+		k3d cluster delete p3; \
+	else \
+		echo "No K3D cluster named p3 found."; \
+	fi
+	@if docker ps -a | grep -q gitlab; then \
+		echo "Stopping and removing GitLab container..."; \
+		docker stop gitlab; \
+		docker rm gitlab; \
+	else \
+		echo "No GitLab container found."; \
+	fi
+	@echo "Removing all stopped containers..."
+	@docker container prune -f
+	@echo "Clean-up complete."
