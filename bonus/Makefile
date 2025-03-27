@@ -1,4 +1,4 @@
-.PHONY: install apply run connect setup-gitlab init-repo clean
+.PHONY: install apply run connect setup-gitlab setup-gitlab-user init-repo clean
 
 install:
 	@if k3d cluster list | grep -q bonus; then \
@@ -75,20 +75,14 @@ setup-gitlab:
 			sleep 30; \
 			echo "Still waiting for GitLab to initialize..."; \
 		done; \
-		echo "Running reconfigure..."; \
-		docker exec gitlab gitlab-ctl reconfigure; \
-		echo "Creating admin user 'gitlab'..."; \
-		docker exec -it gitlab gitlab-rails runner \
-			"user = User.create!(username: 'gitlab', password: 'gitlabpassword', password_confirmation: 'gitlabpassword', email: 'gitlab@localhost', admin: true, confirmed_at: Time.now); user.save!"; \
-		echo "Once GitLab is up, access it at http://localhost:8080"; \
-		echo "SSH access is available on port 2222"; \
-		echo "New admin user credentials:"; \
-		echo "Username: gitlab"; \
-		echo "Password: gitlabpassword"; \
-		echo "Root password can be found by running: docker exec -it gitlab grep 'Password:' /etc/gitlab/initial_root_password"; \
+		echo "1 minute left" \
+		sleep 60; \
 	else \
 		echo "GitLab container is already running."; \
 	fi
+
+setup-gitlab-user:
+	@bash scripts/gitlab_user.sh
 
 init-repo:
 	@echo "Initializing local GitLab repository..."
