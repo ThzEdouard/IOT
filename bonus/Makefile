@@ -19,7 +19,8 @@ install:
 	@kubectl create secret generic repo-secret \
 		--namespace=argocd \
 		--from-literal=type=git \
-		--from-literal=url=git@localhost:gitlab/iot.git \
+		--from-literal=url=git@172.19.0.1:root/iot.git \
+		--from-literal=insecure=true \
 		--from-file=sshPrivateKey=$$(ls ~/.ssh/id_* 2>/dev/null | grep -v "\.pub$$" | head -n 1) \
 		--dry-run=client -o yaml | \
 		kubectl label -f - --local -o yaml argocd.argoproj.io/secret-type=repository | \
@@ -48,8 +49,9 @@ connect:
 	else \
 		echo "Connecting to pod: $$POD_NAME"; \
 		if ! kubectl exec $$POD_NAME -n dev -- which curl > /dev/null 2>&1; then \
-			echo "Installing curl..."; \
 			kubectl exec $$POD_NAME -n dev -- apk add --no-cache curl; \
+			kubectl exec $$POD_NAME -n dev -- apk add --no-cache openssh-client; \
+			kubectl exec $$POD_NAME -n dev -- apk add --no-cache git; \
 		fi; \
 		kubectl exec -it $$POD_NAME -n dev -- /bin/sh; \
 	fi 
@@ -60,7 +62,7 @@ setup-gitlab:
 		echo "Starting GitLab container..."; \
 		docker run --detach \
 			--hostname localhost \
-			--publish 2222:22 \
+			--publish 22:22 \
 			--publish 8080:80 \
 			--publish 8443:443 \
 			--name gitlab \
@@ -77,6 +79,9 @@ setup-gitlab:
 		done; \
 		echo "1 minute left" \
 		sleep 60; \
+		echo "Once GitLab is up, access it at http://localhost:8080"; \
+		echo "SSH access is available on port 2222"; \
+		echo "Get the initial password by running: docker exec -it gitlab grep 'Password:' /etc/gitlab/initial_root_password"; \
 	else \
 		echo "GitLab container is already running."; \
 	fi
@@ -93,17 +98,18 @@ init-repo:
 		echo "Please create the repository first, then run this target again."; \
 		exit 1; \
 	fi
-	@mkdir -p /tmp/iot/confs
-	@cp confs/*.yaml /tmp/iot/confs/
-	@cd /tmp/iot && \
-		git init && \
-		git add . && \
+	@if [ -d ".git" ]; then \
+		echo "Found existing .git directory, removing it..."; \
+		rm -rf .git; \
+	fi
+	@git init && \
+		git add confs/*.yaml && \
 		git config --local user.email "local@example.com" && \
 		git config --local user.name "Local User" && \
 		git commit -m "Initial commit" && \
-		git remote add origin git@localhost:gitlab/iot.git && \
-		echo "Attempting to push to GitLab (you may need to accept the host key)..." && \
-		git push -u origin master || echo "Failed to push. Please push manually."
+		git remote add origin git@localhost:root/iot.git && \
+		echo "Attempting to push to GitLab..." && \
+		git push -uf origin master || echo "Failed to push. Please push manually."
 
 clean:
 	@if k3d cluster list | grep -q bonus; then \
@@ -116,6 +122,8 @@ clean:
 		echo "Stopping and removing GitLab container..."; \
 		docker stop gitlab; \
 		docker rm gitlab; \
+		echo "Removing GitLab volumes..."; \
+		docker volume rm gitlab-config gitlab-logs gitlab-data; \
 	else \
 		echo "No GitLab container found."; \
 	fi
