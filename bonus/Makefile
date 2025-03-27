@@ -1,4 +1,4 @@
-.PHONY: install apply run connect setup-gitlab setup-gitlab-user init-repo clean
+.PHONY: install apply run connect setup-gitlab setup-gitlab-namespace init-repo clean
 
 install:
 	@if k3d cluster list | grep -q bonus; then \
@@ -81,8 +81,8 @@ setup-gitlab:
 		echo "GitLab container is already running."; \
 	fi
 
-setup-gitlab-user:
-	@bash scripts/gitlab_user.sh
+setup-gitlab-namespace:
+	@bash scripts/gitlab_namespace.sh
 
 init-repo:
 	@echo "Initializing local GitLab repository..."
