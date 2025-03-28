@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: git@172.19.0.1:root/iot.git
+    repoURL: git@172.19.0.1:gitlab/iot.git
     path: confs
     targetRevision: HEAD
   destination:

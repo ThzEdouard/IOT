@@ -1,4 +1,4 @@
-.PHONY: install apply run connect setup-gitlab setup-gitlab-namespace init-repo clean
+.PHONY: install apply run connect setup-gitlab setup-gitlab-namespace init-repo clean add-repo
 
 install:
 	@if k3d cluster list | grep -q bonus; then \
@@ -19,7 +19,7 @@ install:
 	@kubectl create secret generic repo-secret \
 		--namespace=argocd \
 		--from-literal=type=git \
-		--from-literal=url=git@172.19.0.1:root/iot.git \
+		--from-literal=url=git@172.19.0.1:gitlab/iot.git \
 		--from-literal=insecure=true \
 		--from-file=sshPrivateKey=$$(ls ~/.ssh/id_* 2>/dev/null | grep -v "\.pub$$" | head -n 1) \
 		--dry-run=client -o yaml | \
@@ -72,44 +72,49 @@ setup-gitlab:
 			--volume gitlab-data:/var/opt/gitlab \
 			gitlab/gitlab-ce:latest; \
 		echo "GitLab is starting up. This may take a few minutes..."; \
-		echo "Waiting for GitLab to be ready (this may take several minutes)..."; \
-		until docker exec gitlab gitlab-ctl status unicorn > /dev/null 2>&1; do \
-			sleep 30; \
-			echo "Still waiting for GitLab to initialize..."; \
+		i=0; \
+		while ! curl -s http://localhost:8080/-/health > /dev/null; do \
+			case $$i in \
+				0) spin="─";; \
+				1) spin="\\";; \
+				2) spin="|";; \
+				3) spin="/";; \
+			esac; \
+			printf "\r[ $$spin ] Waiting for GitLab..."; \
+			i=$$((( i + 1 ) % 4)); \
+			sleep 1; \
 		done; \
-		echo "1 minute left" \
-		sleep 60; \
-		echo "Once GitLab is up, access it at http://localhost:8080"; \
-		echo "SSH access is available on port 2222"; \
-		echo "Get the initial password by running: docker exec -it gitlab grep 'Password:' /etc/gitlab/initial_root_password"; \
+		printf "\rGitLab is ready!                  \n"; \
+		echo "Access GitLab at http://localhost:8080"; \
+		echo "Username: root"; \
+		echo "Password: $$(docker exec gitlab grep 'Password:' /etc/gitlab/initial_root_password | cut -d ' ' -f 2)"; \
 	else \
 		echo "GitLab container is already running."; \
 	fi
 
-setup-gitlab-namespace:
-	@bash scripts/gitlab_namespace.sh
-
 init-repo:
-	@echo "Initializing local GitLab repository..."
-	@echo "Please make sure GitLab is fully up and running before continuing."
-	@echo "Have you created the repository 'iot' in your local GitLab instance? (y/n)"
-	@read answer; \
-	if [ "$$answer" != "y" ]; then \
-		echo "Please create the repository first, then run this target again."; \
-		exit 1; \
-	fi
-	@if [ -d ".git" ]; then \
-		echo "Found existing .git directory, removing it..."; \
-		rm -rf .git; \
-	fi
-	@git init && \
+	@bash scripts/gitlab_namespace.sh
+	@bash scripts/gitlab_repository.sh
+	@bash scripts/gitlab_ssh_key.sh
+	@if [ -d ".git" ] && git remote -v | grep -q "localhost:gitlab/iot.git"; then \
+		echo "Git repository already initialized with correct remote. Skipping git operations."; \
+	else \
+		if [ -d ".git" ]; then \
+			echo "Found existing .git directory with wrong remote. Removing it..."; \
+			rm -rf .git; \
+		fi; \
+		echo "Removing any existing SSH host key for localhost..."; \
+		ssh-keygen -f ~/.ssh/known_hosts -R localhost || true; \
+		echo "Setting up Git repository and adding the host key automatically..."; \
+		git init && \
 		git add confs/*.yaml && \
 		git config --local user.email "local@example.com" && \
 		git config --local user.name "Local User" && \
 		git commit -m "Initial commit" && \
-		git remote add origin git@localhost:root/iot.git && \
+		git remote add origin git@localhost:gitlab/iot.git && \
 		echo "Attempting to push to GitLab..." && \
-		git push -uf origin master || echo "Failed to push. Please push manually."
+		GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no" git push -uf origin master || echo "Failed to push. Please push manually."; \
+	fi
 
 clean:
 	@if k3d cluster list | grep -q bonus; then \
