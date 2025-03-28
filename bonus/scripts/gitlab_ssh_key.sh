@@ -13,7 +13,7 @@ fi
 echo "Using key: $PUBLIC_KEY_FILE"
 PUBLIC_KEY=$(cat "$PUBLIC_KEY_FILE")
 
-if [ "$HTTP_CODE" != "404" ]; then
+if [ "$HTTP_CODE" = "200" ]; then
 	echo "The SSH key is already added to the user 'gitlab'."
 else
 	echo "Adding SSH key to user 'gitlab'..."
