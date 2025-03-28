@@ -27,17 +27,14 @@ begin
 	user.assign_personal_namespace(Organizations::Organization.default_organization)
 	user.skip_confirmation!
 	user.save!
-	puts 'User gitlab created successfully.'
+	puts \"User 'gitlab' created successfully.\"
 rescue => e
 	puts \"Error: #{e.message}\"
 	exit(1)
 end
 EOL"
-
 	docker exec gitlab gitlab-rails runner /tmp/create_user.rb
 	docker exec gitlab rm /tmp/create_user.rb
-
-	echo "User 'gitlab' created successfully."
 fi
 
 echo "Access GitLab at http://localhost:8080"

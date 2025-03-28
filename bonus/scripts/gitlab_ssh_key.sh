@@ -44,11 +44,7 @@ rescue => e
 	exit(1)
 end
 EOL"
-
 	echo "$PUBLIC_KEY" | docker exec -i gitlab bash -c "cat > /tmp/ssh_key.pub"
-
 	docker exec gitlab gitlab-rails runner /tmp/add_ssh_key.rb
 	docker exec gitlab rm /tmp/add_ssh_key.rb /tmp/ssh_key.pub
-
-	echo "SSH key added to GitLab user 'gitlab'."
 fi

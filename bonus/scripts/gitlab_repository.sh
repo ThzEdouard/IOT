@@ -40,9 +40,6 @@ rescue => e
 	exit(1)
 end
 EOL"
-
 	docker exec gitlab gitlab-rails runner /tmp/create_repo.rb
 	docker exec gitlab rm /tmp/create_repo.rb
-
-	echo "Repository 'iot' created successfully."
 fi
