@@ -20,8 +20,8 @@ begin
 		username: 'gitlab',
 		name: 'gitlab',
 		email: 'gitlab@example.com',
-		password: 'G!tL@bS3cur3P@ssw0rd!,
-		password_confirmation: 'G!tL@bS3cur3P@ssw0rd!,
+		password: 'G!tL@bS3cur3P@ssw0rd!',
+		password_confirmation: 'G!tL@bS3cur3P@ssw0rd!',
 		admin: true
 	)
 	user.assign_personal_namespace(Organizations::Organization.default_organization)
