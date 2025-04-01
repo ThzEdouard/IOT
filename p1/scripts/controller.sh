@@ -1,22 +1,24 @@
 #!/bin/bash
 
 SERVER_IP="192.168.56.110"
-TOKEN_FILE="/vagrant/config/token"
+TOKEN_FILE="/vagrant/token"
 
-echo "[+] Mise à jour et installation des prérequis..."
-apt-get update -y
-apt-get install -y curl sshpass net-tools
+echo "[+] Updating and installing prerequisites..."
+DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends curl sshpass net-tools
 
-echo "[+] Installation de K3s en mode Server..."
-curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --node-ip=${SERVER_IP}" sh -
+echo "[+] Installing K3s in Server mode..."
+curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --node-ip=${SERVER_IP} --disable traefik --disable servicelb" sh -
 
-echo "[+] Configuration de kubectl pour l'utilisateur vagrant..."
-mkdir -p /home/vagrant/.kube
-cp /etc/rancher/k3s/k3s.yaml /home/vagrant/.kube/config
-chown -R vagrant:vagrant /home/vagrant/.kube
-echo "export KUBECONFIG=/home/vagrant/.kube/config" >> /home/vagrant/.bashrc
+echo "[+] Parallel configuration..."
+(
+	mkdir -p /home/vagrant/.kube
+	cp /etc/rancher/k3s/k3s.yaml /home/vagrant/.kube/config
+	chown -R vagrant:vagrant /home/vagrant/.kube
+	echo "export KUBECONFIG=/home/vagrant/.kube/config" >>/home/vagrant/.bashrc
+) &
 
-echo "[+] Sauvegarde du token pour les agents..."
-cat /var/lib/rancher/k3s/server/node-token > $TOKEN_FILE
+cat /var/lib/rancher/k3s/server/node-token >$TOKEN_FILE
 
-echo "[✔] Installation du serveur terminée !"
+wait
+
+echo "[✔] Server installation completed!"

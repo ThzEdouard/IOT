@@ -13,17 +13,17 @@ spec:
         app: app3
     spec:
       containers:
-      - name: app3
-        image: nginx
-        ports:
-        - containerPort: 80
-        volumeMounts:
-        - name: app3-content
-          mountPath: /usr/share/nginx/html
+        - name: app3
+          image: nginx
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: app3-content
+              mountPath: /usr/share/nginx/html
       volumes:
-      - name: app3-content
-        configMap:
-          name: app3-content
+        - name: app3-content
+          configMap:
+            name: app3-content
 ---
 apiVersion: v1
 kind: Service
